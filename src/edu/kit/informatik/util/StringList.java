@@ -22,7 +22,12 @@ public enum StringList {
     /**
      * Error message for when an assembly already exists and a new would like to be added with the same name.
      */
-    ASSEMBLY_ALREADY_EXISTS("an assembly of this name already exists");
+    ASSEMBLY_ALREADY_EXISTS("an assembly of this name already exists"),
+    
+    /**
+     * Separates a command and its parameters.
+     */
+    COMMAND_SEPARATOR(" ");
     
     /**
      * Textual representation of the output.

@@ -3,9 +3,9 @@ package edu.kit.informatik.data;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import edu.kit.informatik.exceptions.RuleBrokenException;
 import edu.kit.informatik.util.StringList;
@@ -22,15 +22,15 @@ public class NeedsAssessment {
      * A list of all trees (assemblies that are not a part of anything). Keys are
      * the roots of the trees.
      */
-    private Map<TreeNode, Tree> mapofTrees;
+    public Map<String, Tree> mapofTrees;
 
     /** List of assemblies that are a part of a tree. */
-    private List<TreeNode> listofAssemblies;
+    public List<TreeNode> listofAssemblies;
 
     /**
      * Keeps track of all parts
      */
-    private List<Item> listofParts;
+    public List<TreeNode> listofParts;
 
     /**
      * Constructor for the needs assessment class.
@@ -53,49 +53,108 @@ public class NeedsAssessment {
      * @param childItemNames The item names to be added.
      * @throws RuleBrokenException If an assembly of the same name already exists.
      */
-    public void addAssembly(String nameOfAssembly, String[] childItemNames) throws RuleBrokenException {
-        TreeNode newAssembly = new TreeNode(new Item(nameOfAssembly));
-        if (mapofTrees.containsKey(newAssembly)) {
+    // Make sure to clone all the children before passing them through this
+    // method!!!!!
+    public void addAssembly(String nameOfAssembly, List<TreeNode> children) throws RuleBrokenException {
+        boolean doesExist = false;
+        List<TreeNode> assemblies = new ArrayList<>();
+        if (mapofTrees.containsKey(nameOfAssembly)) {
             throwAssemblyExists();
         }
         for (TreeNode assembly : listofAssemblies) {
-            if (assembly.equals(newAssembly)) {
+            if (assembly.getNameofData().equals(nameOfAssembly)) {
                 throwAssemblyExists();
             }
         }
-        // If the item is a part that already exists
-        if (listofParts.contains(newAssembly.getData())) {
+        for (TreeNode part : listofParts) {
+            if (part.getNameofData().equals(nameOfAssembly)) {
+                doesExist = true;
+                break;
+            }
+        }
+        if (doesExist) {
             for (Tree tree : mapofTrees.values()) {
-                List<TreeNode> nodesOfNewAssembly = tree.getAllNodes().stream().filter(node -> node.equals(newAssembly))
-                        .collect(Collectors.toList());
-                for (TreeNode node : nodesOfNewAssembly) {
-                    addChildItems(childItemNames, node);
+                TreeNode root = tree.getRootElement();
+                List<TreeNode> newAssemblies = tree.findNodes(root, nameOfAssembly, new ArrayList<>());
+                if (!newAssemblies.isEmpty()) {
+                    assemblies.addAll(newAssemblies);
+                    for (TreeNode assembly : newAssemblies) {
+                        checkForCycles(assembly, children, tree);
+                    }
                 }
             }
-            listofAssemblies.add(newAssembly);
+            addAssemblyThatExists(assemblies, children);
         } else {
-            // If the new assembly doesn't exist in the system then it will made into a
-            // "super"
-            // assembly (a.k.a a tree)
-            Tree newTree = new Tree(newAssembly.getData());
-            newTree.addNode(newAssembly);
-            mapofTrees.put(newAssembly, newTree);
-            addChildItems(childItemNames, newAssembly);
+            Tree newTree = new Tree(new Item(nameOfAssembly));
+            for (TreeNode kid : children) {
+                newTree.addNode(kid, newTree.getRootElement(), false);
+                if (kid.isLeaf()) {
+                    listofParts.add(kid);
+                } else {
+                    listofAssemblies.add(kid);
+                }
+            }
+            mapofTrees.put(nameOfAssembly, newTree);
         }
     }
 
-    /**
-     * Helper method for addAssembly to add all the children to a node.
-     * 
-     * @param childItemNames All the names of the children.
-     * @param node           The parent node to these children.
-     */
-    private void addChildItems(String[] childItemNames, TreeNode node) {
-        for (String nameofItem : childItemNames) {
-            Item childItem = new Item(nameofItem);
-            node.addChild(new TreeNode(childItem));
-            listofParts.add(childItem);
+    private void addAssemblyThatExists(List<TreeNode> assemblies, List<TreeNode> children) {
+        for (TreeNode assembly : assemblies) {
+            for (TreeNode child : children) {
+                Tree tree = mapofTrees.get(assembly.getTreeName());
+                if (child.isLeaf()) {
+                    listofParts.add(child);
+                } else {
+                    listofAssemblies.add(child);
+                }
+                tree.addNode(child, assembly, false);
+                listofAssemblies.add(assembly);
+                listofParts.remove(assembly);
+            }
         }
+    }
+
+    private void checkForCycles(TreeNode assembly, List<TreeNode> children, Tree tree) throws RuleBrokenException {
+        List<TreeNode> ancestors = new ArrayList<>();
+        List<TreeNode> descendants = new ArrayList<>();
+        for (TreeNode child : children) {
+            if (assembly.getNameofData().equals(child.getNameofData())) {
+                throwCycle(child.getNameofData() + "-" + child.getNameofData());
+            }
+            ancestors = assembly.getAncestors();
+            descendants.add(child);
+            descendants.addAll(child.getChildren());
+            for (TreeNode ancestor : ancestors) {
+                for (TreeNode descendant : descendants) {
+                    if (descendant.getNameofData().equals(ancestor.getNameofData())) {
+                        throwCycle(createErrorMessage(descendant, ancestor, ancestors, assembly));
+                    }
+                }
+            }
+        }
+    }
+
+    private String createErrorMessage(TreeNode descendantCycle, TreeNode ancestorCycle, List<TreeNode> ancestors,
+            TreeNode assembly) {
+        StringBuilder errorMsg = new StringBuilder();
+        List<TreeNode> ancestorsOfDescendant = descendantCycle.getAncestors();
+        StringBuilder leftOfAssembly = new StringBuilder();
+        StringBuilder rightOfAssembly = new StringBuilder();
+        for (TreeNode ancestor : ancestors) {
+            leftOfAssembly.append("-").append(ancestor.getNameofData());
+            if (ancestor.getNameofData().equals(ancestorCycle.getNameofData())) {
+                break;
+            }
+        }
+        leftOfAssembly.reverse();
+        for (TreeNode node : ancestorsOfDescendant) {
+            rightOfAssembly.append("-").append(node.getNameofData());
+        }
+        rightOfAssembly.reverse();
+        rightOfAssembly.append(descendantCycle.getNameofData());
+        String leftError = leftOfAssembly.toString();
+        String rightError = rightOfAssembly.toString();
+        return errorMsg.append(leftError).append(assembly.getNameofData()).append("-").append(rightError).toString();
     }
 
     /**
@@ -107,79 +166,92 @@ public class NeedsAssessment {
      * @throws RuleBrokenException If no such assembly exists in the system.
      */
     public void removeAssembly(String nameofAssembly) throws RuleBrokenException {
-        TreeNode assembly = new TreeNode(new Item(nameofAssembly));
-        if (mapofTrees.containsKey(assembly)) {
-            removeTree(assembly);
-        } else if (listofAssemblies.contains(assembly)) {
-            removeNormalAssembly(assembly);
+        boolean isanAssembly = false;
+        List<TreeNode> listofAssembliesCopy = new ArrayList<>();
+        listofAssembliesCopy.addAll(listofAssemblies);
+        Iterator<TreeNode> iter = listofAssembliesCopy.iterator();
+        while (iter.hasNext()) {
+            TreeNode assembly = iter.next();
+            if (assembly.getNameofData().equals(nameofAssembly)) {
+                removeNormalAssembly(assembly);
+                isanAssembly = true;
+            }
+        }
+        if (isanAssembly) {
+            return;
+        } else if (mapofTrees.containsKey(nameofAssembly)) {
+            removeTree(mapofTrees.get(nameofAssembly).getRootElement());
         } else {
             throw new RuleBrokenException("no BOM exists in the system for the specified name: " + nameofAssembly);
         }
     }
 
     private void removeTree(TreeNode assembly) {
-        for (Tree tree : mapofTrees.values()) {
-            TreeNode root = tree.getRootElement();
-            if (root.equals(assembly)) {
-                for (TreeNode treenode : tree.getAllNodes()) {
-                    if (!treenode.isLeaf()) {
-                        treenode.getData().setAmount(1);
-                        Tree childTree = new Tree(treenode);
-                        mapofTrees.put(treenode, childTree);
-                    }
-                }
-                mapofTrees.remove(tree.getRootElement());
-                root = null;
-                return;
+        for (TreeNode child : assembly.getChildren()) {
+            if (!child.isLeaf()) {
+                listofAssemblies.remove(child);
+                child.getData().setAmount(1);
+                Tree childTree = new Tree(child);
+                mapofTrees.put(child.getNameofData(), childTree);
+            } else {
+                listofParts.remove(child);
             }
         }
+        Tree tree = mapofTrees.get(assembly.getNameofData());
+        mapofTrees.remove(assembly.getNameofData());
+        tree.deleteTree();
     }
 
     private void removeNormalAssembly(TreeNode assembly) {
-        for (Tree superAssembly : mapofTrees.values()) {
-            for (TreeNode node : superAssembly.getAllNodes()) {
-                if (node.equals(assembly)) {
-                    listofAssemblies.remove(node);
-                    listofParts.add(node.getData());
-                    for (TreeNode child : node.getChildren()) {
-                        if (!child.isLeaf()) {
-                            child.getData().setAmount(1);
-                            Tree childTree = new Tree(child);
-                            mapofTrees.put(child, childTree);
-                        }
-                    }
-                    node.deleteChildren();
-                }
+        for (TreeNode child : assembly.getChildren()) {
+            if (!child.isLeaf()) {
+                listofAssemblies.remove(child);
+                child.getData().setAmount(1);
+                Tree childTree = new Tree(child);
+                mapofTrees.put(child.getNameofData(), childTree);
+            } else {
+                listofParts.remove(child);
             }
         }
-        return;
+
+        listofAssemblies.remove(assembly);
+        assembly.deleteChildren();
+        listofParts.add(assembly);
     }
 
     /**
      * Method to create a String of the children of a node.
+     * 
      * @param nameofAssembly The name of the assembly we want to print.
      * @return A String of the children of the assembly.
      * @throws RuleBrokenException If no such assembly exists
      */
     public String printAssembly(String nameofAssembly) throws RuleBrokenException {
-        Item assemblyItem = new Item(nameofAssembly);
-        TreeNode assemblyItemNode = new TreeNode(assemblyItem);
-        if (!listofParts.contains(assemblyItem) || !mapofTrees.containsKey(assemblyItemNode)
-                || listofAssemblies.contains(assemblyItemNode)) {
-            throwAssemblyDoesntExist(nameofAssembly);
-        }
-        if (listofParts.contains(assemblyItem)) {
-            return "COMPONENT";
+        for (TreeNode part : listofParts) {
+            if (part.getNameofData().equals(nameofAssembly)) {
+                return "COMPONENT";
+            }
         }
         TreeNode actualNode = null;
-        if (mapofTrees.containsKey(assemblyItemNode)) {
-             actualNode = mapofTrees.keySet().stream().filter(node -> node.equals(assemblyItemNode))
-                     .findFirst().get();
-        } else {
-            actualNode = listofAssemblies.stream().filter(node -> node.equals(assemblyItemNode))
-                    .findFirst().get();
+        boolean isTree = false;
+        for (String name : mapofTrees.keySet()) {
+            if (name.equals(nameofAssembly)) {
+                actualNode = mapofTrees.get(name).getRootElement();
+                isTree = true;
+                break;
+            }
         }
-        assert actualNode != null;
+        if (!isTree) {
+            for (TreeNode assembly : listofAssemblies) {
+                if (assembly.getNameofData().equals(nameofAssembly)) {
+                    actualNode = assembly;
+                    break;
+                }
+            }
+        }
+        if (actualNode == null) {
+            throwDoesntExist(nameofAssembly);
+        }
         List<TreeNode> children = actualNode.getChildren();
         List<Item> childrenItems = new ArrayList<>();
         for (TreeNode child : children) {
@@ -192,11 +264,14 @@ public class NeedsAssessment {
         }
         return assemblyStringB.toString().replaceAll(";$", "");
     }
-    
+
     /**
      * Gets all the assemblies of an assembly in the required format.
-     * @param nameofAssembly The name of the assembly we want to get all others from.
-     * @return String of all the assemblies or "EMPTY" if the assembly is only made up of  parts.
+     * 
+     * @param nameofAssembly The name of the assembly we want to get all others
+     *                       from.
+     * @return String of all the assemblies or "EMPTY" if the assembly is only made
+     *         up of parts.
      * @throws RuleBrokenException If no assembly of that name exists.
      */
     public String getAssemblies(String nameofAssembly) throws RuleBrokenException {
@@ -207,18 +282,25 @@ public class NeedsAssessment {
         if (node.areChildrenComponents()) {
             return "EMPTY";
         }
-        List<TreeNode> listofDescendants = node.getDescendantAssemblies();
-        Collections.sort(listofDescendants, new NodeComparator());
+        List<TreeNode> listofAssemblies = new ArrayList<>();
+        for (TreeNode descendant : node.getDescendants()) {
+            if (!descendant.isLeaf()) {
+                listofAssemblies.add(descendant);
+            }
+        }
+        Collections.sort(listofAssemblies, new NodeComparator());
         StringBuilder assemblies = new StringBuilder();
-        for (TreeNode descendant : listofDescendants) {
-            assemblies.append(descendant.toString()).append(";");
+        for (TreeNode assembly : listofAssemblies) {
+            assemblies.append(assembly.toString()).append(";");
         }
         return assemblies.toString().replaceAll(";$", "");
     }
-    
+
     /**
      * Gets all the components of an assembly in the required format.
-     * @param nameofAssembly The name of the assembly we want to get all the components from.
+     * 
+     * @param nameofAssembly The name of the assembly we want to get all the
+     *                       components from.
      * @return String of all the components.
      * @throws RuleBrokenException If no assembly of that name exists.
      */
@@ -227,34 +309,45 @@ public class NeedsAssessment {
         if (node == null) {
             throwAssemblyDoesntExist(nameofAssembly);
         }
-        List<TreeNode> listofDescendants = node.getDescendantComponents();
-        Collections.sort(listofDescendants, new NodeComparator());
-        StringBuilder assemblies = new StringBuilder();
-        for (TreeNode descendant : listofDescendants) {
-            assemblies.append(descendant.toString()).append(";");
+        List<TreeNode> listofComponents = new ArrayList<>();
+        for (TreeNode descendant : node.getDescendants()) {
+            if (descendant.isLeaf()) {
+                listofComponents.add(descendant);
+            }
         }
-        return assemblies.toString().replaceAll(";$", "");
+        Collections.sort(listofComponents, new NodeComparator());
+        StringBuilder components = new StringBuilder();
+        for (TreeNode assembly : listofComponents) {
+            components.append(assembly.toString()).append(";");
+        }
+        return components.toString().replaceAll(";$", "");
     }
     
-    private TreeNode getNode(String name) {
-        Item assemblyItem = new Item(name);
-        TreeNode assemblyItemNode = new TreeNode(assemblyItem);
-        TreeNode nodeToGet = null;
-        if (mapofTrees.containsKey(assemblyItemNode)) {
-            nodeToGet = mapofTrees.keySet().stream().filter(node -> node.equals(assemblyItemNode))
-                    .findFirst().get();
-       } else if (listofAssemblies.contains(assemblyItemNode)) {
-           nodeToGet = listofAssemblies.stream().filter(node -> node.equals(assemblyItemNode))
-                   .findFirst().get();
-       }
-        return nodeToGet;
+    private TreeNode getNode(String nameofNode) {
+        if (mapofTrees.containsKey(nameofNode)) {
+            return mapofTrees.get(nameofNode).getRootElement();
+        }
+        for (TreeNode assembly : listofAssemblies) {
+            if (assembly.getNameofData().equals(nameofNode)) {
+                return assembly;
+            }
+        }
+        return null;
     }
 
     private void throwAssemblyExists() throws RuleBrokenException {
         throw new RuleBrokenException(StringList.ASSEMBLY_ALREADY_EXISTS.toString());
     }
-    
+
     private void throwAssemblyDoesntExist(String name) throws RuleBrokenException {
-        throw new RuleBrokenException( "no BOM or component exists in the system for the specified name: " + name);
+        throw new RuleBrokenException("no BOM exists in the system for the specified name: " + name);
+    }
+    
+    private void throwDoesntExist(String name) throws RuleBrokenException {
+        throw new RuleBrokenException("no BOM or component exists in the system for the specified name: " + name);
+    }
+
+    private void throwCycle(String msg) throws RuleBrokenException {
+        throw new RuleBrokenException(StringList.CYCLE_ERROR_MSG.toString() + msg);
     }
 }
