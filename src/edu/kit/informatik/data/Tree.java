@@ -100,8 +100,8 @@ public class Tree {
         }
         StringBuilder errormsgBuilder = new StringBuilder();
         String errormsg = getCyclicErrorMessage(parent, child, errormsgBuilder);
-        if (errormsg == null) {
-            return "null";
+        if (errormsg.isEmpty()) {
+            return "";
         }
         return new StringBuilder(errormsg).reverse().append("-").append(child.getNameofData()).toString();
     }

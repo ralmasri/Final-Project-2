@@ -323,7 +323,120 @@ public class NeedsAssessment {
         return components.toString().replaceAll(";$", "");
     }
     
-    private TreeNode getNode(String nameofNode) {
+    public void addPart(String nameofAssembly, int amount, String name) throws RuleBrokenException {
+        List<TreeNode> nodes = new ArrayList<>();
+        if (mapofTrees.containsKey(nameofAssembly)) {
+            nodes.add(mapofTrees.get(nameofAssembly).getRootElement());
+        } else {
+            for (Tree tree : mapofTrees.values()) {
+                List<TreeNode> foundNodes = tree.findNodes(tree.getRootElement(), nameofAssembly, new ArrayList<>());
+                if (!foundNodes.isEmpty()) {
+                    nodes.addAll(foundNodes);
+                }
+            }
+        }
+        if (nodes.isEmpty()) {
+            throwAssemblyDoesntExist(nameofAssembly);
+        }
+        TreeNode child = null;
+        if (getNode(name) == null) {
+            child = new TreeNode(new Item(amount, name));
+            listofParts.add(child);
+        } else {
+            child = getNode(name).getCopy();
+        }
+        checkForCycles(nodes, child);
+        if (getNode(name).getAmountofData() + amount > 1000) {
+            throw new RuleBrokenException("the amount of a part or assembly cannot exceed 1000.");
+        }
+        boolean isAChild = false;
+        int index = 0;
+        for (TreeNode kid : nodes.get(0).getChildren()) {
+            if (kid.getNameofData().equals(name)) {
+                isAChild = true;
+                index = nodes.get(0).getChildren().indexOf(kid);
+                break;
+            }
+        }
+        if (isAChild) {
+            for (TreeNode assembly : nodes) {
+                TreeNode toBeIncreased = assembly.getChildren().get(index);
+                toBeIncreased.getData().setAmount(toBeIncreased.getAmountofData() + amount);
+            }
+        } else {
+            for (TreeNode assembly : nodes) {
+                assembly.addChild(child);
+            }
+        }
+    }
+    
+    public void removePart(String nameofAssembly, int amount, String name) throws RuleBrokenException {
+        boolean isATree = false;
+        List<TreeNode> nodes = new ArrayList<>();
+        if (mapofTrees.containsKey(nameofAssembly)) {
+            nodes.add(mapofTrees.get(nameofAssembly).getRootElement());
+            isATree = true;
+        } else {
+            for (Tree tree : mapofTrees.values()) {
+                List<TreeNode> foundNodes = tree.findNodes(tree.getRootElement(), nameofAssembly, new ArrayList<>());
+                if (!foundNodes.isEmpty()) {
+                    nodes.addAll(foundNodes);
+                }
+            }
+        }
+        if (nodes.isEmpty()) {
+            throwAssemblyDoesntExist(nameofAssembly);
+        }
+        TreeNode child = getNode(name);
+        if (child == null) {
+            throw new RuleBrokenException("no part or assembly of the specified name exists: " + name + ".");
+        }
+        boolean isContained = false;
+        int index = 0;
+        for (TreeNode kid : nodes.get(0).getChildren()) {
+            if (kid.getNameofData().equals(name)) {
+                if (kid.getAmountofData() >= amount) {
+                    isContained = true;
+                    index = nodes.get(0).getChildren().indexOf(kid);
+                    break;
+                } else {
+                    throw new RuleBrokenException(nameofAssembly + " doesn't contain " + name 
+                            + " in the specified amount: " + amount + ".");
+                }
+            } else {
+                throw new RuleBrokenException(nameofAssembly + " doesn't contain " + name + ".");
+            }
+        }
+        for (TreeNode node : nodes) {
+            TreeNode tobeRemoved = node.getChildren().get(index);
+            if (tobeRemoved.getAmountofData() - amount == 0) {
+                if (isATree && node.getChildren().size() == 1) {
+                    Tree tree = mapofTrees.get(nameofAssembly);
+                    mapofTrees.remove(nameofAssembly);
+                    tree.deleteTree();
+                    return;
+                } else if (node.getChildren().size() == 1) {
+                    listofAssemblies.remove(node);
+                    listofParts.add(node);
+                    node.deleteChildren();
+                }
+            } else {
+                tobeRemoved.getData().setAmount(tobeRemoved.getAmountofData() - amount);
+            }
+        }
+    }
+    
+    private void checkForCycles(List<TreeNode> nodes, TreeNode child) throws RuleBrokenException {
+        for (TreeNode node : nodes) {
+            Tree tree = mapofTrees.get(node.getTreeName());
+            String errorMsg = tree.getCycleErrorMessage(node, child);
+            if (!errorMsg.isEmpty()) {
+                throwCycle(errorMsg);
+            }
+        }
+    }
+    
+    public TreeNode getNode(String nameofNode) {
         if (mapofTrees.containsKey(nameofNode)) {
             return mapofTrees.get(nameofNode).getRootElement();
         }
