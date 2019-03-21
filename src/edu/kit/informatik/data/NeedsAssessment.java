@@ -43,10 +43,10 @@ public class NeedsAssessment {
     public void addAssembly(String nameOfAssembly, List<TreeNode> children) throws RuleBrokenException {
         boolean doesExist = false; // If the part we want to turn into an assembly exists in the system.
         List<TreeNode> assemblies = new ArrayList<>();
-        if (system.getAssembly(nameOfAssembly) != null) {
+        if (system.getAssembly(nameOfAssembly) != null) { // Add assembly cannot be used for assemblies.
             throwAssemblyExists();
         }
-        for (TreeNode part : system.getListofParts()) {
+        for (TreeNode part : system.getListofParts()) { // Checking if a part of the name exists.
             if (part.getNameofData().equals(nameOfAssembly)) {
                 doesExist = true;
                 break;
@@ -74,12 +74,12 @@ public class NeedsAssessment {
 
     /**
      * Helper method to add an assembly for an item that doesn't exist in the
-     * system.
+     * system. If the assembly doesn't exist, it will be made into a super assembly.
      * @param nameOfAssembly The name of said item.
      * @param children       The children to be added.
      */
     private void addAssemblyThatDoesntExist(String nameOfAssembly, List<TreeNode> children) throws RuleBrokenException {
-        Tree newTree = new Tree(new Item(nameOfAssembly));
+        Tree newTree = new Tree(new Item(nameOfAssembly)); 
         for (TreeNode kid : children) {
             newTree.addNode(kid, newTree.getRootElement(), false);
             if (kid.isLeaf()) {
@@ -139,19 +139,19 @@ public class NeedsAssessment {
         boolean isanAssembly = false;
         List<TreeNode> listofAssembliesCopy = new ArrayList<>();
         listofAssembliesCopy.addAll(system.getListofAssemblies());
-        Iterator<TreeNode> iter = listofAssembliesCopy.iterator();
-        while (iter.hasNext()) {
-            TreeNode assembly = iter.next();
+        Iterator<TreeNode> iterator = listofAssembliesCopy.iterator();
+        while (iterator.hasNext()) {
+            TreeNode assembly = iterator.next();
             if (assembly.getNameofData().equals(nameofAssembly)) {
                 removeNormalAssembly(assembly);
                 isanAssembly = true;
             }
         }
-        if (isanAssembly) {
+        if (isanAssembly) { // Normal assembly.
             return;
-        } else if (system.getMapofTrees().containsKey(nameofAssembly)) {
+        } else if (system.getMapofTrees().containsKey(nameofAssembly)) { // Super assembly.
             removeTree(system.getMapofTrees().get(nameofAssembly).getRootElement());
-        } else {
+        } else { // Not an assembly.
             throw new RuleBrokenException("no BOM exists in the system for the specified name: " + nameofAssembly);
         }
     }
@@ -164,7 +164,6 @@ public class NeedsAssessment {
         for (TreeNode child : assembly.getChildren()) {
             if (!child.isLeaf()) {
                 system.getListofAssemblies().remove(child);
-                child.getData().setAmount(1);
                 Tree childTree = new Tree(child);
                 system.getMapofTrees().put(child.getNameofData(), childTree);
             } else {
@@ -204,7 +203,7 @@ public class NeedsAssessment {
      * @throws RuleBrokenException If no such assembly exists
      */
     public String printAssembly(String nameofAssembly) throws RuleBrokenException {
-        for (TreeNode part : system.getListofParts()) {
+        for (TreeNode part : system.getListofParts()) { // The item exists as component.
             if (part.getNameofData().equals(nameofAssembly)) {
                 return "COMPONENT";
             }
@@ -237,7 +236,7 @@ public class NeedsAssessment {
         if (node == null) {
             throwAssemblyDoesntExist(nameofAssembly);
         }
-        if (node.areChildrenComponents()) {
+        if (node.areChildrenComponents()) { // All the children are components.
             return "EMPTY";
         }
         List<TreeNode> listofAssemblies = new ArrayList<>();
@@ -292,10 +291,11 @@ public class NeedsAssessment {
         if (nodes.isEmpty()) {
             throwAssemblyDoesntExist(nameofAssembly);
         }
-        boolean isAChild = false;
+        boolean isAChild = false; // If the part to be added is already a child of the assembly.
         int index = 0;
-        for (TreeNode child : nodes.get(FIRST_INDEX).getChildren()) {
-            if (child.getNameofData().equals(name)) {
+     // All the instances of assembly have the same children, so it doesn't matter which one I check.
+        for (TreeNode child : nodes.get(FIRST_INDEX).getChildren()) { 
+            if (child.getNameofData().equals(name)) { 
                 isAChild = true;
                 index = nodes.get(FIRST_INDEX).getChildren().indexOf(child);
                 break;
@@ -399,15 +399,22 @@ public class NeedsAssessment {
         for (TreeNode node : nodes) { 
             TreeNode tobeRemoved = node.getChildren().get(index);
             if (tobeRemoved.getAmountofData() - amount == VANISHING_AMOUNT) {
-                if (isATree && node.getChildren().size() == 1) {
-                    Tree tree = system.getMapofTrees().get(nameofAssembly);
-                    system.getMapofTrees().remove(nameofAssembly);
-                    tree.deleteTree();
-                    return;
-                } else if (node.getChildren().size() == 1) {
-                    system.getListofAssemblies().remove(node);
-                    system.getListofParts().add(node);
-                    node.deleteChildren();
+                if (tobeRemoved.isLeaf()) {
+                    system.getListofParts().remove(tobeRemoved);
+                } else {
+                    system.getListofAssemblies().remove(tobeRemoved);
+                }
+                node.getChildren().remove(index);
+                if (node.getChildren().isEmpty()) {
+                    if (isATree) {
+                        Tree tree = system.getMapofTrees().get(nameofAssembly);
+                        system.getMapofTrees().remove(nameofAssembly);
+                        tree.deleteTree();
+                        return; // There is only one instance of a tree, which is why there is not point in iterating.
+                    } else {
+                        system.getListofAssemblies().remove(node);
+                        system.getListofParts().add(node);
+                    }
                 }
             } else {
                 tobeRemoved.getData().setAmount(tobeRemoved.getAmountofData() - amount);
