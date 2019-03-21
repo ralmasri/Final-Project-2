@@ -17,6 +17,7 @@ public class NodeComparator implements Comparator<TreeNode> {
         if (intComparator == 0) {
             return firstNode.getNameofData().compareTo(secondNode.getNameofData());
         }
+        // To reverse the order (since this is what is required by the exercise).
         return (intComparator > 0) ? -1 : 1;
     }
 

@@ -1,9 +1,8 @@
 package edu.kit.informatik.data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-import edu.kit.informatik.exceptions.RuleBrokenException;
 
 /**
  * Represents a "super" assembly, as in an assembly that isn't a part of any
@@ -62,8 +61,6 @@ public class Tree {
      * @param child       The child node to be added.
      * @param parent      The parent node under which the child will be added.
      * @param doesChildExist True if the child already exists, otherwise false.
-     * @throws RuleBrokenException When the addition of said child node creates a
-     *                             cycle in the tree.
      */
     public void addNode(TreeNode child, TreeNode parent, boolean doesChildExist) {
         if (doesChildExist) {
@@ -80,48 +77,69 @@ public class Tree {
     public void deleteTree() {
         this.root = null;
     }
-
+    
     /**
-     * Gets a cycle error message.
-     * @param parent The parent node. 
-     * @param child The node to be added.
-     * @return The error message if the addition causes a cycle, otherwise empty String.
+     * Method to check for cycles when adding multiple children.
+     * @param assembly The assembly we want to add said children to.
+     * @param children The children.
+     * @return Custom error message if a cycle would occur, otherwise empty string.
      */
-    public String getCycleErrorMessage(TreeNode parent, TreeNode child) {
-        if (child.equals(parent)) { // Will always create a cycle.
-            return parent.getNameofData() + "-" + child.getNameofData();
+    public static String checkForCycles(TreeNode assembly, List<TreeNode> children) {
+        List<TreeNode> ancestors = new ArrayList<>();
+        List<TreeNode> descendants = new ArrayList<>();
+        for (TreeNode child : children) {
+            if (assembly.getNameofData().equals(child.getNameofData())) {
+                return child.getNameofData() + "-" + child.getNameofData();
+            }
+            ancestors = assembly.getAncestors();
+            descendants.add(child);
+            descendants.addAll(child.getChildren());
+            for (TreeNode descendant : descendants) {
+                for (TreeNode ancestor : ancestors) {
+                    if (descendant.getNameofData().equals(ancestor.getNameofData())) {
+                        return createErrorMessage(descendant, ancestor, ancestors, assembly);
+                    }
+                }
+            }
         }
-        // If the node to be added has no children (a.k.a a part) then it cannot create
-        // a cycle.
-        if (child.getChildren().isEmpty()) {
-            return "";
-        }
-        StringBuilder errormsgBuilder = new StringBuilder();
-        String errormsg = getCyclicErrorMessage(parent, child, errormsgBuilder);
-        if (errormsg.isEmpty()) {
-            return "";
-        }
-        return new StringBuilder(errormsg).reverse().append("-").append(child.getNameofData()).toString();
+        return "";
     }
 
     /**
-     * Recursive helper method to create an error message.
-     * @param parent The parent node.
-     * @param child The child to be added.
-     * @param errormsg The error message StringBuilder.
-     * @return The error message as a String.
+     * Method to create a custom message in case a cycle is formed. 
+     * @param descendantCycle The descendant node that would cause a cycle.
+     * @param ancestorCycle The ancestor node that would cause a cycle.
+     * @param ancestors All ancestors of the assembly.
+     * @param assembly The assembly.
+     * @return The custom error message.
      */
-    private String getCyclicErrorMessage(TreeNode parent, TreeNode child, StringBuilder errormsg) {
-        if (parent.equals(root)) {
-            return "";
-        } else if (parent.equals(child)) {
-            return errormsg.append(child.getNameofData()).toString();
-        } else {
-            errormsg.append(parent.getNameofData()).append("-");
-            getCyclicErrorMessage(parent.getParent(), child, errormsg);
+    private static String createErrorMessage(TreeNode descendantCycle, TreeNode ancestorCycle, List<TreeNode> ancestors,
+            TreeNode assembly) {
+        StringBuilder errorMsg = new StringBuilder();
+        List<TreeNode> ancestorsOfDescendant = descendantCycle.getAncestors();
+        StringBuilder leftOfAssembly = new StringBuilder();
+        StringBuilder rightOfAssembly = new StringBuilder();
+        for (TreeNode ancestor : ancestors) {
+            leftOfAssembly.append("-").append(ancestor.getNameofData());
+            if (ancestor.getNameofData().equals(ancestorCycle.getNameofData())) {
+                break;
+            }
         }
-        return errormsg.toString();
+        leftOfAssembly.reverse();
+        for (TreeNode node : ancestorsOfDescendant) {
+            rightOfAssembly.append("-").append(node.getNameofData());
+            if (node.getNameofData().equals(assembly.getNameofData())) {
+                break;
+            }
+        }
+        rightOfAssembly.reverse();
+        rightOfAssembly.append(descendantCycle.getNameofData());
+        String leftError = leftOfAssembly.toString();
+        String rightError = rightOfAssembly.toString();
+        return errorMsg.append(leftError).append(assembly.getNameofData())
+                .append("-").append(rightError).toString();
     }
+
 
     /**
      * Method to find all nodes in a tree of a certain name.

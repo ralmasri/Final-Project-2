@@ -39,8 +39,8 @@ public class AddAssemblyCommand extends Command {
      */
     private TreeNode getChildNode(int amount, String name) {
         TreeNode node = null;
-        if (factory.getNode(name) != null) {
-            node = factory.getNode(name).getCopy();
+        if (factory.getSystem().getAssembly(name) != null) {
+            node = factory.getSystem().getAssembly(name).getCopy();
             node.getData().setAmount(amount);
         } else {
             node = new TreeNode(new Item(amount, name));
