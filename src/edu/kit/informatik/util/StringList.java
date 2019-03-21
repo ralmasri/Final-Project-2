@@ -73,12 +73,13 @@ public enum StringList {
     /**
      * Regex for allowed names.
      */
-    ALLOWED_NAMES("[a-zA-Z]+"),
+    ALLOWED_NAMES("([a-zA-Z]+)"),
     
     /**
      * Regex for allowed amounts.
      */
-    ALLOWED_AMOUNTS("[1-9][0-9]{0,2}|1000|0");
+    ALLOWED_AMOUNTS("([1-9][0-9]{0,2}|1000)");
+    
     
     /**
      * Textual representation of the output.

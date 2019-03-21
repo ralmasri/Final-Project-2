@@ -35,7 +35,7 @@ public class AddAssemblyCommand extends Command {
      * @param amount The amount of the Item.
      * @param name The name of the Item.
      * @return If the item already exists as a tree/assembly, a clone of it will be returned.
-     * If it doesn't exist a new node, will be returned.
+     * If it doesn't exist, a new node with the correct amount and name will be returned.
      */
     private TreeNode getChildNode(int amount, String name) {
         TreeNode node = null;
@@ -68,9 +68,13 @@ public class AddAssemblyCommand extends Command {
             names.add(name);
             children.add(getChildNode(amount, name));
         }
-        Set<String> set = new HashSet<>(names);
-        if (set.size() < names.size()) {
-            throw new InvalidInputException("you cannot have duplicate parts and/or assemblies as paramteres.");
+        // This checks for duplicate name entries by the user (HashSet removes duplicates).
+        Set<String> setOfNames = new HashSet<>(names);
+        if (setOfNames.size() < names.size()) {
+            throw new InvalidInputException("you cannot have duplicate parts and/or assemblies as parameters.");
+        }
+        if (names.contains(nameAssembly)) {
+            throw new RuleBrokenException(StringList.CYCLE_ERROR_MSG.toString() + nameAssembly + "-" + nameAssembly);
         }
         factory.addAssembly(nameAssembly, children);
         return StringList.OK.toString();

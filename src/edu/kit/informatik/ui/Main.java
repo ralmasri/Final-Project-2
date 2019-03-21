@@ -84,7 +84,7 @@ public class Main {
      */
     private static String getParameters(final String[] inputArray, final CommandInterface command)
             throws InvalidInputException {
-        // The input can be a command and its parameter or just a command.
+        // The input can be a command and its parameter.
         if (inputArray.length > 2) {
             throw new InvalidInputException("wrong input format.");
         }

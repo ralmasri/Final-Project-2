@@ -3,6 +3,7 @@ package edu.kit.informatik.data;
 import java.util.Comparator;
 
 /**
+ * Compares two nodes. It compares the amounts first. If they are equal, then the names are compared.
  * 
  * @author Rakan Zeid Al Masri
  * @version 1.0

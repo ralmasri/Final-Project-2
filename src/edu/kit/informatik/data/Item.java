@@ -2,11 +2,14 @@ package edu.kit.informatik.data;
 
 import java.util.Objects;
 
+import edu.kit.informatik.util.StringList;
+
 /**
  * A class that represents a general abstraction of a component and an assembly.
  * 
  * The only difference between a component and an assembly is that an assembly has children
  * which is why this abstraction is used.
+ * 
  * @author Rakan Zeid Al Masri
  * @version 1.0
  */
@@ -64,7 +67,7 @@ public class Item {
     
     @Override
     public String toString() {
-        return name + ":" + String.valueOf(amount);
+        return name + StringList.COLON.toString() + String.valueOf(amount);
     }
     
     @Override

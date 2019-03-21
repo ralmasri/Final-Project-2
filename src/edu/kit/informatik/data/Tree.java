@@ -61,14 +61,11 @@ public class Tree {
      * 
      * @param child       The child node to be added.
      * @param parent      The parent node under which the child will be added.
-     * @param doesItExist True if the tree node already exists, otherwise false.
+     * @param doesChildExist True if the child already exists, otherwise false.
      * @throws RuleBrokenException When the addition of said child node creates a
      *                             cycle in the tree.
      */
     public void addNode(TreeNode child, TreeNode parent, boolean doesChildExist) {
-        // TODO Make sure node you are using this method on is NOT a rootNode and remove
-        // its tree from the system.
-        assert !child.isRoot();
         if (doesChildExist) {
             TreeNode temp = child.getCopy();
             parent.addChild(temp);
@@ -77,17 +74,18 @@ public class Tree {
         }
     }
     
+    /**
+     * Delete a tree.
+     */
     public void deleteTree() {
         this.root = null;
     }
 
-    
-
     /**
-     * 
-     * @param parent
-     * @param child
-     * @return
+     * Gets a cycle error message.
+     * @param parent The parent node. 
+     * @param child The node to be added.
+     * @return The error message if the addition causes a cycle, otherwise empty String.
      */
     public String getCycleErrorMessage(TreeNode parent, TreeNode child) {
         if (child.equals(parent)) { // Will always create a cycle.
@@ -106,6 +104,13 @@ public class Tree {
         return new StringBuilder(errormsg).reverse().append("-").append(child.getNameofData()).toString();
     }
 
+    /**
+     * Recursive helper method to create an error message.
+     * @param parent The parent node.
+     * @param child The child to be added.
+     * @param errormsg The error message StringBuilder.
+     * @return The error message as a String.
+     */
     private String getCyclicErrorMessage(TreeNode parent, TreeNode child, StringBuilder errormsg) {
         if (parent.equals(root)) {
             return "";
@@ -119,11 +124,12 @@ public class Tree {
     }
 
     /**
-     * Method to find a specific node.
+     * Method to find all nodes in a tree of a certain name.
      * 
      * @param node The node we are checking
-     * @param name The name of the node we want.
-     * @return The node if it is found, otherwise null.
+     * @param name The name of the node(s) we want.
+     * @param nodes The list of found nodes.
+     * @return A list of found nodes.
      */
     public List<TreeNode> findNodes(TreeNode node, String name, List<TreeNode> nodes) {
         for (TreeNode child : node.getChildren()) {
@@ -135,6 +141,10 @@ public class Tree {
         return nodes;
     }
 
+    /**
+     * Getter method for the name of the root of a tree.
+     * @return The name of the root.
+     */
     public String getRootName() {
         return root.getNameofData();
     }

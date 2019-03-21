@@ -15,6 +15,7 @@ import java.util.Objects;
 
 public class TreeNode {
 
+    /** The name of the tree that this tree node is in. */
     private String treeRootName;
 
     /** The data stored in the node. */
@@ -83,6 +84,10 @@ public class TreeNode {
         return this.parent;
     }
 
+    /**
+     * Setter method for the parent node.
+     * @param parent The parent node.
+     */
     public void setParent(TreeNode parent) {
         this.parent = parent;
     }
@@ -136,10 +141,20 @@ public class TreeNode {
         return true;
     }
 
+    /**
+     * Method to get the ancestors of a node (all nodes above a given node).
+     * @return The list of ancestors.
+     */
     public List<TreeNode> getAncestors() {
         return getAncestorList(new ArrayList<>(), this);
     }
 
+    /**
+     * Recursive method to get the ancestors.
+     * @param ancestors The current list of ancestors.
+     * @param node The current node.
+     * @return The list of ancestors.
+     */
     private List<TreeNode> getAncestorList(List<TreeNode> ancestors, TreeNode node) {
         if (node.getParent() != null) {
             ancestors.add(node.getParent());
@@ -148,25 +163,48 @@ public class TreeNode {
         return ancestors;
     }
 
+    /**
+     * Method to get the descendants of a node (all nodes under a given node).
+     * @return The list of descendants.
+     */
     public List<TreeNode> getDescendants() {
-        return getListDescendants(this, new HashMap<>());
+        return getListDescendants(this, new HashMap<>(), this.getNameofData());
     }
 
-    public List<TreeNode> getListDescendants(TreeNode node, Map<String, TreeNode> listofChildren) {
+    /**
+     * Recursive method to get the descendants of a node.
+     * 
+     * This method also takes into account the multiplier and returns the list of descendants
+     * with their proper amounts.
+     * 
+     * @param node The current node.
+     * @param listofChildren The list of descendants.
+     * @param originalName The name of the original node we are checking.
+     * @return The list of descendants.
+     */
+    private List<TreeNode> getListDescendants(TreeNode node, Map<String, TreeNode> listofChildren, 
+            String originalName) {
         for (TreeNode child : node.getChildren()) {
+            // If the node wasn't already added.
             if (!listofChildren.containsKey(child.getNameofData())) {
                 List<TreeNode> ancestors = child.getAncestors();
-                int multiplier = 1;
+                int multiplier = 1; // The amounts of all ancestors multiplied
                 for (TreeNode ancestor : ancestors) {
+                    if (ancestor.getNameofData().equals(originalName)) {
+                        break;
+                    }
                     multiplier *= ancestor.getAmountofData();
                 }
                 TreeNode childCopy = child.getCopy();
-                childCopy.getData().setAmount(childCopy.getAmountofData() * multiplier);
+                childCopy.getData().setAmount(child.getAmountofData() * multiplier);
                 listofChildren.put(childCopy.getNameofData(), childCopy);
-            } else {
+            } else { // If it was added then we just add the amount to the one in the list.
                 List<TreeNode> ancestors = child.getAncestors();
-                int multiplier = 1;
+                int multiplier = 1; // The amounts of all ancestors multiplied
                 for (TreeNode ancestor : ancestors) {
+                    if (ancestor.getNameofData().equals(originalName)) {
+                        break;
+                    }
                     multiplier *= ancestor.getAmountofData();
                 }
                 int multipliedAmount = multiplier * child.getAmountofData();
@@ -174,7 +212,7 @@ public class TreeNode {
                 int newAmount = oldAmount + multipliedAmount;
                 listofChildren.get(child.getNameofData()).getData().setAmount(newAmount);
             }
-            getListDescendants(child, listofChildren);
+            getListDescendants(child, listofChildren, originalName);
         }
         return new ArrayList<>(listofChildren.values());
     }
@@ -182,34 +220,45 @@ public class TreeNode {
    
 
     /**
-     * Setter method for tree.
+     * Setter method for tree name.
      * 
-     * @param tree The tree that the node is in.
+     * @param treeRootName The name of the tree to which said tree node will be added to.
      */
     public void setTreeName(String treeRootName) {
         this.treeRootName = treeRootName;
     }
 
+    /**
+     * Getter method for the tree name.
+     * @return The tree name.
+     */
     public String getTreeName() {
         return treeRootName;
     }
 
-    public void setData(Item data) {
-        this.data = data;
-    }
-
+    /**
+     * Method to clone a node by value and not by reference.
+     * @return The cloned node.
+     */
     public TreeNode getCopy() {
         return copyNode(this, new HashMap<>(), treeRootName);
     }
 
-    private TreeNode copyNode(TreeNode root, Map<TreeNode, TreeNode> images, String treeName) {
-        TreeNode copy = images.get(root);
+    /**
+     * Recursive method to completely clone a node and its children
+     * @param node The current node.
+     * @param map Map of copied nodes and their copies.
+     * @param treeName The name of the tree of the original node.
+     * @return The cloned node.
+     */
+    private TreeNode copyNode(TreeNode node, Map<TreeNode, TreeNode> map, String treeName) {
+        TreeNode copy = map.get(node);
         if (copy == null) {
-            copy = new TreeNode(new Item(root.getAmountofData(), root.getNameofData()));
+            copy = new TreeNode(new Item(node.getAmountofData(), node.getNameofData()));
             copy.setTreeName(treeName);
-            images.put(root, copy);
-            for (TreeNode child : root.getChildren()) {
-                copy.addChild(copyNode(child, images, treeName));
+            map.put(node, copy);
+            for (TreeNode child : node.getChildren()) {
+                copy.addChild(copyNode(child, map, treeName));
             }
         }
         return copy;
@@ -222,15 +271,14 @@ public class TreeNode {
         }
         if (obj != null && getClass().equals(obj.getClass())) {
             TreeNode otherTreeNode = (TreeNode) obj;
-            return this.data.equals(otherTreeNode.data) && this.treeRootName.equals(otherTreeNode.treeRootName)
-                    && this.parent.getNameofData().equals(otherTreeNode.getNameofData());
+            return this.data.equals(otherTreeNode.data) && this.treeRootName.equals(otherTreeNode.treeRootName);
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(data, treeRootName, parent.getNameofData());
+        return Objects.hash(data, treeRootName);
     }
 
     @Override
