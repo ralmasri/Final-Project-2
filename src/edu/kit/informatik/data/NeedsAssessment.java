@@ -221,7 +221,7 @@ public class NeedsAssessment {
         Collections.sort(childrenItems, new ItemComparator());
         StringBuilder assemblyBuilder = new StringBuilder();
         for (Item childItem : childrenItems) {
-            assemblyBuilder.append(childItem.toString()).append(";");
+            assemblyBuilder.append(childItem.toString()).append(StringList.SEMICOLON.toString());
         }
         return assemblyBuilder.toString().replaceAll(";$", "");
     }
@@ -379,10 +379,24 @@ public class NeedsAssessment {
             }
         }
         if (child == null) {
-            throwDoesntExist(name);
+            throwDoesntContain(nameofAssembly, name);
         }
+        removePartExecutor(nodes, isATree, amount, name, nameofAssembly);
+    }
+    
+    /**
+     * Helper method that executes the removePart command. Split from the main method for better readability.
+     * @param nodes All instances of the assembly node.
+     * @param isATree true if the assembly is a tree, otherwise false.
+     * @param amount The amount to be deducted.
+     * @param name The name of the child to be deducted.
+     * @param nameofAssembly The name of the assembly.
+     * @throws RuleBrokenException If the parent doesn't contain the child in the specified amount or at all.
+     */
+    private void removePartExecutor(List<TreeNode> nodes, boolean isATree, int amount, String name
+            , String nameofAssembly) throws RuleBrokenException {
         int index = getIndexOfRemoved(nodes, name, amount, nameofAssembly);
-        for (TreeNode node : nodes) {
+        for (TreeNode node : nodes) { 
             TreeNode tobeRemoved = node.getChildren().get(index);
             if (tobeRemoved.getAmountofData() - amount == VANISHING_AMOUNT) {
                 if (isATree && node.getChildren().size() == 1) {
@@ -423,7 +437,7 @@ public class NeedsAssessment {
                             nameofAssembly + " doesn't contain " + name + " in the specified amount: " + amount + ".");
                 }
             } else {
-                throw new RuleBrokenException(nameofAssembly + " doesn't contain " + name + ".");
+                throwDoesntContain(nameofAssembly, name);
             }
         }
         return index;
@@ -444,9 +458,7 @@ public class NeedsAssessment {
         }
     }
     
-    /**
-     * @return The system.
-     */
+    /** @return The system. */
     public SystemInitializer getSystem() {
         return system;
     }
@@ -469,5 +481,9 @@ public class NeedsAssessment {
 
     private void throwAmount() throws RuleBrokenException {
         throw new RuleBrokenException("the amount of a part/assembly cannot exceed 1000.");
+    }
+    
+    private void throwDoesntContain(String nameofAssembly, String name) throws RuleBrokenException {
+        throw new RuleBrokenException(nameofAssembly + " doesn't contain " + name + ".");
     }
 }
