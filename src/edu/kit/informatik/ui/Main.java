@@ -1,11 +1,11 @@
 package edu.kit.informatik.ui;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collection;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
-import edu.kit.informatik.Terminal;
 import edu.kit.informatik.commands.AddAssemblyCommand;
 import edu.kit.informatik.commands.AddPartCommand;
 import edu.kit.informatik.commands.GetAssembliesCommand;
@@ -34,7 +34,7 @@ public class Main {
      * Main method to execute the program.
      * @param args Arguments.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         final NeedsAssessment factory = new NeedsAssessment();
         final Collection<CommandInterface> commands = initializeAllCommands(factory);
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
