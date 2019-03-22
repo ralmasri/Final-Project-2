@@ -2,6 +2,8 @@ package edu.kit.informatik.ui;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 import edu.kit.informatik.Terminal;
 import edu.kit.informatik.commands.AddAssemblyCommand;
@@ -35,7 +37,8 @@ public class Main {
     public static void main(String[] args) {
         final NeedsAssessment factory = new NeedsAssessment();
         final Collection<CommandInterface> commands = initializeAllCommands(factory);
-        String input = Terminal.readLine();
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        String input = br.readLine();
         while (!input.equals(QUIT_COMMAND)) {
             int numberofSpaces = input.length() - input.replaceAll(" ", "").length();
             try {
@@ -53,11 +56,11 @@ public class Main {
                         .findAny()
                         .orElseThrow(() -> new InvalidInputException(StringList.COMMAND_DOESNT_EXIST.toString()));
                 final String parameters = getParameters(inputArray, command);
-                Terminal.printLine(command.run(parameters));
+                System.out.println(command.run(parameters));
             } catch (RuleBrokenException | InvalidInputException exception) {
-                Terminal.printError(exception.getMessage());
+                System.out.println("Error, " + exception.getMessage());
             }
-            input = Terminal.readLine();
+            input = br.readLine();
         }
     }
     
