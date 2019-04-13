@@ -10,8 +10,7 @@ import java.util.Comparator;
  */
 
 public class NodeComparator implements Comparator<TreeNode> {
-
-    @Override
+   @Override
     public int compare(TreeNode firstNode, TreeNode secondNode) {
         int intComparator = Integer.compare(firstNode.getAmountofData(), secondNode.getAmountofData());
         if (intComparator == 0) {
@@ -20,5 +19,4 @@ public class NodeComparator implements Comparator<TreeNode> {
         // To reverse the order (since this is what is required by the exercise).
         return (intComparator > 0) ? -1 : 1;
     }
-
 }
