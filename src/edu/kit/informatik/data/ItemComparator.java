@@ -10,11 +10,8 @@ import java.util.Comparator;
  */
 
 public class ItemComparator implements Comparator<Item> {
-
     @Override
     public int compare(Item firstItem, Item secondItem) {
         return firstItem.getName().compareTo(secondItem.getName());
     }
-
-
 }
